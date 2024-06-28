@@ -1,75 +1,74 @@
 from __future__ import annotations
 
-import folium.features
+import folium
 import geopandas as gpd
-import shapely
 import streamlit as st
-
 from streamlit_folium import st_folium
 
 st.set_page_config(layout="wide")
 
 st.write("## Dynamic layer control updates")
 
-START_LOCATION = [37.7944347109497, -122.398077892527]
-START_ZOOM = 17
+START_LOCATION = [53.134414, -1.871720]
+START_ZOOM = 5
 
 if "feature_group" not in st.session_state:
     st.session_state["feature_group"] = None
 
-wkt1 = (
-    "POLYGON ((-122.399077892527 37.7934347109497, -122.398922660838 "
-    "37.7934544916178, -122.398980265018 37.7937266504805, -122.399133972495 "
-    "37.7937070646238, -122.399077892527 37.7934347109497))"
-)
-wkt2 = (
-    "POLYGON ((-122.397416 37.795017, -122.397137 37.794712, -122.396332 37.794983,"
-    " -122.396171 37.795483, -122.396858 37.795695, -122.397652 37.795466, "
-    "-122.397759 37.79511, -122.397416 37.795017))"
-)
+# Load GeoJSON data
+geojson_file = "postcodes.geojson"
+gdf = gpd.read_file(geojson_file)
 
-polygon_1 = shapely.wkt.loads(wkt1)
-polygon_2 = shapely.wkt.loads(wkt2)
+# Example of properties to access
+print(gdf.head())
 
-gdf1 = gpd.GeoDataFrame(geometry=[polygon_1]).set_crs(epsg=4326)
-gdf2 = gpd.GeoDataFrame(geometry=[polygon_2]).set_crs(epsg=4326)
+# Define style function based on AVG PL_mea
+def style_function_pl(x):
+    return {
+        "fillColor": "#1100f8",  # Example color
+        "color": "#1100f8",      # Example color
+        "fillOpacity": 0.3,      # Example opacity
+        "weight": 2,
+    }
 
-style_parcels = {
-    "fillColor": "#1100f8",
-    "color": "#1100f8",
-    "fillOpacity": 0.13,
-    "weight": 2,
-}
-style_buildings = {
-    "color": "#ff3939",
-    "fillOpacity": 0,
-    "weight": 3,
-    "opacity": 1,
-    "dashArray": "5, 5",
-}
+# Define style function based on AVG LL_mea
+def style_function_ll(x):
+    return {
+        "color": "#ff3939",      # Example color
+        "fillOpacity": 0.3,      # Example opacity
+        "weight": 3,
+        "opacity": 1,
+        "dashArray": "5, 5",
+    }
 
-polygon_folium1 = folium.GeoJson(data=gdf1, style_function=lambda x: style_parcels)
-polygon_folium2 = folium.GeoJson(data=gdf2, style_function=lambda x: style_buildings)
+# Create folium GeoJson objects
+polygon_folium1 = folium.GeoJson(data=gdf,
+                                  style_function=style_function_pl,
+                                  name="AVG PL_mea")
+polygon_folium2 = folium.GeoJson(data=gdf,
+                                  style_function=style_function_ll,
+                                  name="AVG LL_mea")
 
 map = folium.Map(
     location=START_LOCATION,
     zoom_start=START_ZOOM,
     tiles="OpenStreetMap",
-    max_zoom=21,
+    max_zoom=5,
 )
 
-fg1 = folium.FeatureGroup(name="Parcels")
+# Create FeatureGroups
+fg1 = folium.FeatureGroup(name="AVG PL_mea")
 fg1.add_child(polygon_folium1)
 
-fg2 = folium.FeatureGroup(name="Buildings")
+fg2 = folium.FeatureGroup(name="AVG LL_mea")
 fg2.add_child(polygon_folium2)
 
-fg_dict = {"Parcels": fg1, "Buildings": fg2, "None": None, "Both": [fg1, fg2]}
+fg_dict = {"AVG PL_mea": fg1, "AVG LL_mea": fg2, "None": None, "Both": [fg1, fg2]}
 
 control = folium.LayerControl(collapsed=False)
 
-fg = st.radio("Feature Group", ["Parcels", "Buildings", "None", "Both"])
-
+# Streamlit interface
+fg = st.radio("Feature Group", ["AVG PL_mea", "AVG LL_mea", "None", "Both"])
 layer = st.radio("Layer Control", ["yes", "no"])
 
 layer_dict = {"yes": control, "no": None}
